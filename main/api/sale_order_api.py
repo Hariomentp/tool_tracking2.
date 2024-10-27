@@ -27,7 +27,7 @@ def create_sale_order(data):
                 #     f"Order with order number {order_no} already exists. Skipping...")
                 continue
             else:
-                so_creat(order_data)
+                so_creat(order_data , response_data)
                 # Pass order_data to the function
     except Exception as e:
         logger.error(e)
@@ -35,7 +35,8 @@ def create_sale_order(data):
     return JsonResponse(response_data, safe=False)
 
 
-def so_creat(order_data):
+def so_creat(order_data ,  response_data):
+    # response_data = []
     sale_order = None
     try:
         order_no = order_data.get('OrderNo')

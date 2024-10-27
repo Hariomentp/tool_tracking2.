@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
 @retry(**retry_settings)
 def make_api_call_with_retry(payload):
     active_product_info = 'http://10.10.1.18:8400/api/MaterialServices/grninspectioncreate'
+    print("MAKING API CALL TO ERP")
     response = requests.post(active_product_info, json=payload, timeout=10)
+    print(response.content)
     response.raise_for_status()
     return response
 
@@ -45,6 +47,7 @@ def inform_active_status(payload, request):
             print(f"{GREEN}Active quantity information sent successfully.{RESET}")
             return True
         else:
+
             messages.error(
                 request, f'short_quantity_api : {response.status_code}')
             logger.error(
@@ -52,6 +55,7 @@ def inform_active_status(payload, request):
             print(f"{RED}ACTIVE QUANTITY UPLOAD API : {response.status_code}{RESET}")
             return False
     except Exception as e:
+        print(f"EXCEPTION : {e}")
         messages.warning(request, f'Retrying API call: {e}')
         logger.warning(f'Retrying API call: {e}')
         print(f"{RED}Retrying API call: {e}{RESET}")
