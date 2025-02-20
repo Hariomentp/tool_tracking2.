@@ -54,10 +54,26 @@ def get_product_details(request, uuid):
         return Response({"message": "Master object not found"}, status=404)
 
 
-# def is_valid_id(id_str):
-#     if re.match("^[0-9a-fA-F]{16}$", id_str):
-#         return True
-#     return False
+def is_valid_id(id_str):
+        pattern = r'^[A-Za-z0-9]{12}(\d{4})$'
+
+        match = re.match(pattern, id_str)
+        
+        if not match:
+            return False, "Identifier must be 16 characters: 12 alphanumeric followed by 4 digits."
+
+        year_code = match.group(1)  
+        
+        current_year_int = datetime.datetime.now().year
+        current_year = str(current_year_int)[2:]
+        prev_year = str(current_year_int - 1)[2:]  
+        valid_year_code = current_year+prev_year
+        print(valid_year_code)
+        if year_code == valid_year_code:
+            print(year_code , valid_year_code)
+            return True, "ID is valid."
+        else:
+            return False, f"ID is not valid."
 
 
 # PRODUCTS GETS ACTIVATED BELOW !!!!
@@ -71,13 +87,15 @@ def activate_product(request, old_uuid, new_uuid):
         if Master.objects.filter(uuid=new_uuid).exists() :
             messages.error(
                 request, f'UUID {new_uuid} is already in use. Please scan another qr code.')
+        elif not is_valid_id(new_uuid):
+            messages.error(request, f'UUID {new_uuid} is in InValid Format  ')
         else:
             master_product = get_object_or_404(Master, uuid=old_uuid)
             print(f"REQUESTE : {request}")
             # if request.user.has_perm('inlet.change_master'):
             if True:
                 if master_product.status == 'active' and 'activation' in master_product.data_json:
-                    message.error(
+                    messages.error(
                         request, f'Product with UUID {new_uuid} is already active.')
                 else:
                     activator_name = request.user.username
@@ -130,8 +148,16 @@ def activate_product(request, old_uuid, new_uuid):
                             product.in_progress_masters_count = max(
                                 0, product.in_progress_masters_count - 1)
                         else:
-                            product.active_count = + 1
-                            product.in_progress_masters_count -= 1
+                            product.active_count = product.active_count + 1
+                            print( product.in_progress_masters_count )
+                            if product.in_progress_masters_count == 0: 
+                                pass
+                            else: 
+                                try:
+                                    product.in_progress_masters_count = product.in_progress_masters_count - 1
+                                except Exception as e:
+                                    print(f"ERROR IN IN PROGRESS COUNT : {e}")
+                                    product.in_progress_masters_count = 0
                             print(f"ACTIVAE COUNT : {product.active_count}")
                             print(
                                 f"IN PROGRESS COUNT : {product.in_progress_masters_count}")
@@ -346,6 +372,9 @@ def activate_via_btach_single_product(request, batch_id, MaterialCode):
                 print(f"OLD UUID : {master.uuid}  NEW UUID : {new_uuid} ")
                 done = activate_product(request, master.uuid, new_uuid)
                 if done:
+                    # if product_index_item.unactive_count < 0:
+                    #     product_index_item.unactive_count = 0
+                    #     product_index_item.save()
                     product_index_item.unactive_count = product_index_item.unactive_count-1
                     product_index_item.save()
                     count = count + 1
