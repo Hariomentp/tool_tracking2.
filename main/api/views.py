@@ -53,27 +53,36 @@ def get_product_details(request, uuid):
     except Master.DoesNotExist:
         return Response({"message": "Master object not found"}, status=404)
 
-
 def is_valid_id(id_str):
-        pattern = r'^[A-Za-z0-9]{12}(\d{4})$'
+    # Ensure the ID is exactly 16 characters long
+    if len(id_str) != 16:
+        return False, "Identifier must be exactly 16 characters long."
 
-        match = re.match(pattern, id_str)
-        
-        if not match:
-            return False, "Identifier must be 16 characters: 12 alphanumeric followed by 4 digits."
+    # Extract first 12 alphanumeric characters
+    id_main = id_str[:12]
+    # Extract last 4 characters (which should be the financial year)
+    year_code = id_str[-4:]
 
-        year_code = match.group(1)  
-        
-        current_year_int = datetime.datetime.now().year
-        current_year = str(current_year_int)[2:]
-        prev_year = str(current_year_int - 1)[2:]  
-        valid_year_code = current_year+prev_year
-        print(valid_year_code)
-        if year_code == valid_year_code:
-            print(year_code , valid_year_code)
-            return True, "ID is valid."
-        else:
-            return False, f"ID is not valid."
+    # Determine the current financial year
+    current_year_int = datetime.now().year
+    current_month = datetime.now().month
+    
+    if current_month >= 5:  # May to December (Financial Year: "2425")
+        current_fin_year = f"{str(current_year_int)[2:]}{str(current_year_int + 1)[2:]}"
+    else:  # January to April (Financial Year: "2526")
+        current_fin_year = f"{str(current_year_int - 1)[2:]}{str(current_year_int)[2:]}"
+
+
+    if year_code == current_fin_year:
+        print("ID is valid.")
+        return True, "ID is valid."
+    else:
+        print(f"ID is not valid. Year code '{year_code}' is incorrect (Expected: {current_fin_year}).")
+        return False, f"ID is not valid. Year code '{year_code}' is incorrect (Expected: {current_fin_year})."
+
+
+
+
 
 
 # PRODUCTS GETS ACTIVATED BELOW !!!!
@@ -87,8 +96,10 @@ def activate_product(request, old_uuid, new_uuid):
         if Master.objects.filter(uuid=new_uuid).exists() :
             messages.error(
                 request, f'UUID {new_uuid} is already in use. Please scan another qr code.')
-        elif not is_valid_id(new_uuid):
-            messages.error(request, f'UUID {new_uuid} is in InValid Format  ')
+        is_valid, message = is_valid_id(new_uuid)
+        print(f"IS VALID : {is_valid} {message}")
+        if not is_valid:
+            messages.error(request, f'UUID {new_uuid} is in Invalid Format: {message}')
         else:
             master_product = get_object_or_404(Master, uuid=old_uuid)
             print(f"REQUESTE : {request}")
